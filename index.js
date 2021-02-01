@@ -50,13 +50,16 @@ client.on('chat', (channel, userstate, message, self) => {
     const command = args.shift().toLowerCase();
     
     switch (command) {
-        case "test1": {
-            client.say(channel, "test1!");
-            console.log(args);
-            break;
-        }
-        case "test2": {
-            client.say(channel, "test2!");
+        case "join": {
+            if(args.length == 0) {
+                break;
+            }
+            
+            client.join(args[0]).then((data) => {
+                client.say(channel, data + " joined!");
+            }).catch((err) => {
+                client.say(channel, err);
+            });
             break;
         }
         case "jail": {
