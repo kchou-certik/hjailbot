@@ -1,7 +1,5 @@
 const tmi = require('tmi.js');
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config();
-  };
+require('dotenv').config();
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 mongoose.connect(`mongodb+srv://kyouko:${process.env.MONGODB_PASS}@cluster0.pc41u.mongodb.net/hjail?retryWrites=true&w=majority`, {useNewUrlParser: true, useUnifiedTopology: true});
