@@ -51,7 +51,7 @@ client.on('chat', (channel, userstate, message, self) => {
     
     switch (command) {
         case "join": {
-            if(!userstate.mod) {
+            if(!userstate.mod && !userstate.badges.broadcaster) {
                 client.say(channel, "You don't have the authority to do that!");
                 break;
             }
@@ -67,7 +67,7 @@ client.on('chat', (channel, userstate, message, self) => {
             break;
         }
         case "jail": {
-            if(!userstate.mod) {
+            if(!userstate.mod && !userstate.badges.broadcaster) {
                 client.say(channel, "You don't have the authority to do that!");
                 break;
             }
@@ -133,7 +133,7 @@ client.on('chat', (channel, userstate, message, self) => {
         }
 
         case "release": {
-            if(!userstate.mod) {
+            if(!userstate.mod && !userstate.badges.broadcaster) {
                 client.say(channel, "You don't have the authority to do that!");
                 break;
             }
