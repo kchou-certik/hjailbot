@@ -76,7 +76,7 @@ client.on('chat', (channel, userstate, message, self) => {
                 break;
             }
 
-            let user = args[0];
+            let user = args[0].startsWith("@") ? args[0].substring(1) : args[0];
             // Check if user is already in jail
             User.findOne({username: user}, (err, userFound) => {
                 if (userFound && userFound.inJail) {
@@ -141,7 +141,7 @@ client.on('chat', (channel, userstate, message, self) => {
                 client.say(channel, "Please give me the name of the inmate!")
                 break;
             }
-            let q = args[0];
+            let q = args[0].startsWith("@") ? args[0].substring(1) : args[0];
             User.findOne({username: q}, (err, userFound) => {
                 if (err) {
                     client.say(channel, "Error finding user...");
