@@ -14,7 +14,8 @@ db.once('open', () => {
 const userSchema = new Schema({
     username: String,
     inJail: Boolean,
-    timesJailed: Number
+    timesJailed: Number,
+    userLower: String
 })
 
 const User = mongoose.model('User', userSchema);
@@ -37,8 +38,9 @@ client.on('connected', (address, port) => {
     console.log(`Connected to: ${address}:${port}`)
 })
 
-client.on('join', (channel, username, self) => {
-    if (self) {
+client.on('join', (channel, username, s) => {
+    if (s) {
+        console.log(s, username);
         client.say(channel, "🚔 Warden, reporting for duty! 🚔")
     }
 });
@@ -48,14 +50,16 @@ client.on('chat', (channel, userstate, message, self) => {
     
     const args = message.slice(1).split(' ');
     const command = args.shift().toLowerCase();
-    
+   
     switch (command) {
         case "join": {
-            if(!userstate.mod && !userstate.badges.broadcaster) {
+            if(!userstate.mod && (!userstate.badges || !userstate.badges.broadcaster)) {
                 client.say(channel, "You don't have the authority to do that!");
                 break;
             }
+
             if(args.length == 0) {
+                client.say(channel, "Please specify a channel: !join <channel username>")
                 break;
             }
             
@@ -67,7 +71,7 @@ client.on('chat', (channel, userstate, message, self) => {
             break;
         }
         case "jail": {
-            if(!userstate.mod && !userstate.badges.broadcaster) {
+            if(!userstate.mod && (!userstate.badges || !userstate.badges.broadcaster)) {
                 client.say(channel, "You don't have the authority to do that!");
                 break;
             }
@@ -77,8 +81,10 @@ client.on('chat', (channel, userstate, message, self) => {
             }
 
             let user = args[0].startsWith("@") ? args[0].substring(1) : args[0];
+            let userLower = user.toLowerCase();
+
             // Check if user is already in jail
-            User.findOne({username: user}, (err, userFound) => {
+            User.findOne({userLower: userLower}, (err, userFound) => {
                 if (userFound && userFound.inJail) {
                     client.say(channel, `@${userFound.username} is already in jail!`);
                     return;
@@ -96,14 +102,15 @@ client.on('chat', (channel, userstate, message, self) => {
                     let prisoner = new User({
                         username: user,
                         inJail: true,
-                        timesJailed: 1
+                        timesJailed: 1,
+                        userLower: userLower
                     })
-                    prisoner.save((err,prisoner) => {
+                    prisoner.save((err, prisoner) => {
                         if (err) {
                             client.say(channel, "Error saving document!");
                             return;
                         }
-                        client.say(channel, `@${user} has been sent to horny jail!`);
+                        client.say(channel, `@${prisoner.username} has been sent to horny jail!`);
                     });
                 }
             });
@@ -133,7 +140,7 @@ client.on('chat', (channel, userstate, message, self) => {
         }
 
         case "release": {
-            if(!userstate.mod && !userstate.badges.broadcaster) {
+            if(!userstate.mod && (!userstate.badges || !userstate.badges.broadcaster)) {
                 client.say(channel, "You don't have the authority to do that!");
                 break;
             }
@@ -141,8 +148,11 @@ client.on('chat', (channel, userstate, message, self) => {
                 client.say(channel, "Please give me the name of the inmate!")
                 break;
             }
+            
             let q = args[0].startsWith("@") ? args[0].substring(1) : args[0];
-            User.findOne({username: q}, (err, userFound) => {
+            let qLower = q.toLowerCase();
+
+            User.findOne({userLower: qLower}, (err, userFound) => {
                 if (err) {
                     client.say(channel, "Error finding user...");
                     return;
@@ -150,7 +160,7 @@ client.on('chat', (channel, userstate, message, self) => {
                 if (!userFound) {
                     client.say(channel, "Can't find that user... looks like they haven't been in jail yet!");
                 } else if (!userFound.inJail) {
-                    client.say(channel, `@${userFound.username} isn't in jail... they've been good lately O_O`);
+                    client.say(channel, `@${userFound.username} isn't in jail... they've been good lately 😏`);
                 } else {
                     userFound.inJail = false;
                     userFound.save((err, product) => {

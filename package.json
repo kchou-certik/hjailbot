@@ -11,8 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^8.2.0",
-    "mongoose": "^5.11.14",
-    "tmi.js": "^1.7.1"
+    "dotenv": "^8.6.0",
+    "mongoose": "^5.13.3",
+    "tmi.js": "^1.8.3"
   }
 }
