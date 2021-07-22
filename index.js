@@ -15,7 +15,8 @@ const userSchema = new Schema({
     username: String,
     inJail: Boolean,
     timesJailed: Number,
-    userLower: String
+    userLower: String,
+    sentenceEnd: Date
 })
 
 const User = mongoose.model('User', userSchema);
@@ -75,13 +76,21 @@ client.on('chat', (channel, userstate, message, self) => {
                 client.say(channel, "You don't have the authority to do that!");
                 break;
             }
-            if (args.length == 0) {
-                client.say(channel, "Please give me the name of the perpetrator!")
+            if (args.length !== 2) {
+                client.say(channel, "Please give me the name and sentence length! Length in s+m+h+d format. i.e. !jail mrsasians 4s20m");
                 break;
             }
 
             let user = args[0].startsWith("@") ? args[0].substring(1) : args[0];
             let userLower = user.toLowerCase();
+            let sentenceLength = getSeconds(args[1]);
+            let sentenceEnd = Date.now() + (sentenceLength * 1000);
+            let formattedDate = formatDate(sentenceEnd);
+
+            if (sentenceLength === 0) {
+                client.say(channel, "Invalid time format / sentence length of 0 is not allowed! Sentence length format example: 1s2m3h4d");
+                break;
+            }
 
             // Check if user is already in jail
             User.findOne({userLower: userLower}, (err, userFound) => {
@@ -91,26 +100,28 @@ client.on('chat', (channel, userstate, message, self) => {
                 } else if (userFound && !userFound.inJail) {
                     userFound.inJail = true;
                     userFound.timesJailed ++;
+                    userFound.sentenceEnd = sentenceEnd;
                     userFound.save((err, product) => {
                         if (err) {
                             client.say(channel, "Error saving document!");
                             return;
                         }
-                        client.say(channel, `@${userFound.username} has been sent back to jail! It's their ${ordinal_suffix_of(userFound.timesJailed)} offense!`);
+                        client.say(channel, `@${userFound.username} has been sent back to jail! It's their ${ordinal_suffix_of(userFound.timesJailed)} offense! Their sentence will end ${formattedDate}`);
                     });
                 } else {
                     let prisoner = new User({
                         username: user,
                         inJail: true,
                         timesJailed: 1,
-                        userLower: userLower
+                        userLower: userLower,
+                        sentenceEnd: sentenceEnd
                     })
                     prisoner.save((err, prisoner) => {
                         if (err) {
                             client.say(channel, "Error saving document!");
                             return;
                         }
-                        client.say(channel, `@${prisoner.username} has been sent to horny jail!`);
+                        client.say(channel, `@${prisoner.username} has been sent to horny jail! Their sentence will end ${formattedDate}`);
                     });
                 }
             });
@@ -174,6 +185,48 @@ client.on('chat', (channel, userstate, message, self) => {
             })
         break;
         }
+
+        case "addtime": {
+            if(!userstate.mod && (!userstate.badges || !userstate.badges.broadcaster)) {
+                client.say(channel, "You don't have the authority to do that!");
+                break;
+            }
+            if (args.length !== 2) {
+                client.say(channel, "Please give me the name and sentence length! Length in s+m+h+d format. i.e. !addtime mrsasians 6s9m");
+                break;
+            }
+
+            let user = args[0].startsWith("@") ? args[0].substring(1) : args[0];
+            let userLower = user.toLowerCase();
+            let sentenceLength = getSeconds(args[1]);
+
+            if (sentenceLength === 0) {
+                client.say(channel, "Invalid time format / sentence length of 0 is not allowed! Sentence length format example: 1s2m3h4d");
+                break;
+            }
+
+            // Check if user is already in jail
+            User.findOne({userLower: userLower}, (err, userFound) => {
+                if (!userFound || !userFound.inJail) {
+                    client.say(channel, `@${userFound.username} is not in jail!`);
+                    return;
+                } else {
+                    let newSentenceEnd = Date.parse(userFound.sentenceEnd) + (sentenceLength * 1000);
+                    let formattedDate = formatDate(newSentenceEnd);
+
+                    userFound.sentenceEnd = newSentenceEnd;
+                    userFound.save((err, product) => {
+                        if (err) {
+                            client.say(channel, "Error saving document!");
+                            return;
+                        }
+                        client.say(channel, `@${userFound.username}'s sentence will end ${formattedDate}`);
+                    });
+                }
+            });
+
+            break;
+        }
     }
 });
 
@@ -190,4 +243,21 @@ function ordinal_suffix_of(i) {
         return i + "rd";
     }
     return i + "th";
+}
+
+function getSeconds(str) {
+    var seconds = 0;
+    var secondsMatch = str.match(/(\d+)\s*s/);
+    var days = str.match(/(\d+)\s*d/);
+    var hours = str.match(/(\d+)\s*h/);
+    var minutes = str.match(/(\d+)\s*m/);
+    if (secondsMatch) { seconds += parseInt(secondsMatch); }
+    if (days) { seconds += parseInt(days[1])*86400; }
+    if (hours) { seconds += parseInt(hours[1])*3600; }
+    if (minutes) { seconds += parseInt(minutes[1])*60; }
+    return seconds;
+  }
+
+function formatDate(dateInput) {
+    return new Date(dateInput).toLocaleString("en-us",{timeZone: "US/Eastern"}) + " EST";
 }
