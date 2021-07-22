@@ -259,5 +259,5 @@ function getSeconds(str) {
   }
 
 function formatDate(dateInput) {
-    return new Date(dateInput).toLocaleString("en-us",{timeZone: "US/Eastern"}) + " EST";
+    return new Date(dateInput).toLocaleString("en-us",{timeZone: "America/New_York"}) + " EST";
 }
