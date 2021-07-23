@@ -179,11 +179,42 @@ client.on('chat', (channel, userstate, message, self) => {
                             client.say(channel, "Error updating record!");
                             return;
                         }
-                        client.say(channel, `@${userFound.username} has been released from jail!`);
+
+                        let say = userFound.username + " has been released from jail! Their sentence was until " + formatDate(userFound.sentenceEnd) + ". ";
+
+                        say += (userFound.sentenceEnd > Date.now()) ? "Congratulations on the early release! 😲" : "Try to stay out of trouble 😠"
+
+                        client.say(channel, say);
                     });
                 }
             })
         break;
+        }
+
+        case "releasemany": {
+            if(!userstate.mod && (!userstate.badges || !userstate.badges.broadcaster)) {
+                client.say(channel, "You don't have the authority to do that!");
+                break;
+            }
+            
+            // uncomment the userLower filter for dev testing
+            User.find({userLower: { $regex: /^testdummy.*/ }, inJail: true, sentenceEnd: { $lte: Date.now() }}, (err, usersFound) => {
+                if (err) {
+                    client.say(channel, "Error finding users to release...");
+                    return;
+                }
+
+                for (user of usersFound) {
+                    user.inJail = false;
+                    user.save();
+                }
+
+                let names = usersFound.map(x => x.username).join(", ");
+
+                client.say(channel, `Released ${names}! 🔓`)
+            });
+
+            break;
         }
 
         case "addtime": {
@@ -207,8 +238,12 @@ client.on('chat', (channel, userstate, message, self) => {
 
             // Check if user is already in jail
             User.findOne({userLower: userLower}, (err, userFound) => {
+                if (err) {
+                    client.say(channel, "Error finding user...");
+                    return;
+                }
                 if (!userFound || !userFound.inJail) {
-                    client.say(channel, `@${userFound.username} is not in jail!`);
+                    client.say(channel, `${user} is not in jail!`);
                     return;
                 } else {
                     let newSentenceEnd = Date.parse(userFound.sentenceEnd) + (sentenceLength * 1000);
@@ -222,6 +257,35 @@ client.on('chat', (channel, userstate, message, self) => {
                         }
                         client.say(channel, `@${userFound.username}'s sentence will end ${formattedDate}`);
                     });
+                }
+            });
+
+            break;
+        }
+
+        case "sentence": {
+            if (args.length > 0) {
+                var user = args[0].startsWith("@") ? args[0].substring(1) : args[0];
+            } else {
+                var user = userstate.username;
+            }
+
+            let userLower = user.toLowerCase();
+
+            User.findOne({userLower: userLower}, (err, userFound) => {
+                if (err) {
+                    client.say(channel, "Error finding user...");
+                    return;
+                }
+                if (!userFound || !userFound.inJail) {
+                    client.say(channel, `${user} is not in jail!`);
+                    return;
+                } else {
+                    if (userFound.sentenceEnd < Date.now()) {
+                        client.say(channel, `${userFound.username}'s sentence ended ${formatDate(userFound.sentenceEnd)}!`)
+                    } else {
+                        client.say(channel, `${userFound.username}'s sentence will end ${formatDate(userFound.sentenceEnd)}`)
+                    }
                 }
             });
 
